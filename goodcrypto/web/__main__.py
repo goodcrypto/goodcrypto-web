@@ -26,7 +26,7 @@
     We want to detect when a process locks up, not just when it dies.
 
     Copyright 2014 GoodCrypto
-    Last modified: 2014-09-05
+    Last modified: 2014-12-04
     
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
     
@@ -89,7 +89,8 @@ from syr.log import get_log
 from syr.dict import DictObject
 from syr.user import sudo
 import syr.utils
-from syr.utils import edit_file_in_place, stacktrace
+from syr.fs import edit_file_in_place
+from syr.utils import stacktrace
 from syr.times import now, one_second, timedelta_to_seconds
 from syr.redir import redir_stdout, redir_stderr
 

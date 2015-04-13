@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
     Copyright 2014 GoodCrypto
-    Last modified: 2014-09-19
+    Last modified: 2014-12-04
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -119,7 +119,7 @@ class LogFile(object):
         if self.logging_enabled:
             m = re.match('^.*(\.log)', self.log.pathname)
             if m:
-                filename = self.log.pathname.replace(m.group(1), '.x.log')
+                filename = self.log.pathname.replace(m.group(1), '.log')
             else:
                 filename = '{}.x'.format(self.log.pathname)
             with open(filename, 'at') as f:

@@ -17,7 +17,7 @@
     You may have to delete an earlier version of the cert from your browser first.
    
     Copyright 2014 GoodCrypto
-    Last modified: 2014-10-19
+    Last modified: 2014-12-05
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -216,10 +216,7 @@ class WebFilter(miproxy.proxy.RequestInterceptorPlugin, miproxy.proxy.ResponseIn
         return response
     
     def remove_param(self, params, name, why):
-        ''' Remove a header from params. 
-        
-            'why' may include {} which is replaced by the param value. 
-        '''
+        ''' Remove a header from params. '''
     
         if name in params:
             value = params[name]
@@ -298,7 +295,120 @@ class TimeFilter(WebFilter):
             self.log.debug('missing date')
                 
         return params
-      
+            
+class TrackingBeaconFilter(WebFilter):
+    ''' Remove commom tracking beacon headers.
+    
+        Obviously what we really need is to default deny headers, and 
+        whitelist only what's safe.
+        
+        See 
+          * [lessonslearned.org/sniff Simple test page for Cellular ISP tracking beacons - by Kenn White]
+          * [https://www.eff.org/deeplinks/2014/11/verizon-x-uidh Verizon Injecting Perma-Cookies to Track Mobile Customers, Bypassing Privacy Controls | Electronic Frontier Foundation]
+          * http://www.reddit.com/r/technology/comments/2kt1j6/somebodys_already_using_verizons_id_to_track/
+          * https://web.archive.org/web/20141027194059/https://github.com/Funnerator/fast_tim_conf/blob/master/lua/id_set.lua
+          * search: propublica.views.acrButton
+          
+        Propublica's code (http://www.reddit.com/r/technology/comments/2kt1j6/somebodys_already_using_verizons_id_to_track/)::
+        
+            <script>
+            propublica.views.acrButton = propublica.View.extend({
+              id : "run-demo",
+              tag : "a",
+            
+              bindings : {
+                click : "runDemo"
+              },
+            
+              getAcrData : function(data) {
+                var ids = {
+                      "HTTP_X_UIDH"     : "Verizon", 
+                      "HTTP_X_ACR"      : "AT&T",
+                      "HTTP_X_VF_ACR"   : "Vodafone",
+                      "HTTP_X_UP_SUBNO" : "AT&T",
+                      "HTTP_X_UP_VODACOMGW_SUBID" : "",
+                      "HTTP_X_PIPER_ID" : "",
+                      "HTTP_X_MSISDN"   : ""
+                    };
+            
+                for (userHeader in data) {
+                  if (ids[userHeader]) {
+                    return {
+                      "carrier" : ids[userHeader],
+                      "id"      : data[userHeader]
+                    }
+                  }
+                }
+                return false;
+              },
+            
+              runDemo : function(e) {
+                e.preventDefault();
+                var that = this;
+                $.getJSON( "http://projects.propublica.org/jd/acr.json", function( data ) {
+                    $(".hideafterclick").hide();
+                    var tracker = that.getAcrData(data);
+                    if (tracker) {
+                      $("#uid").text(tracker.id)
+                      $("#carrier").html(tracker.carrier)
+                      $(".result").show();
+                    } else {
+                      $(".noresult").show();
+                    }
+                });    
+              }
+            });
+            </script>
+            
+            
+                <div class="pp-interactive" id="tracking-button">
+                    <h2 class="pp-int-hed">
+                        Does Your Phone Company Track You?</h2>
+                    <div id="tracking-demo">
+                        <div class="hideafterclick">
+                            <a class="action" id="run-demo" href="#">Check for Tracking Code</a><p>Click from your smartphone or tablet (with Wi-Fi turned off) to see if your telecom provider is adding a tracking number. We don't save any information.</p>
+                                        <p class="pp-interactive-source">Al Shaw and Jonathan Stray, ProPublica</p>
+                        </div>
+                        <p class="result">Your <span id="carrier"></span> personal tracking code is</p>
+                        <p class="result code" id="uid">token</p>
+                        <p class="result">This is being sent by your carrier to every site you visit using this device.</p>
+                        <p class="noresult">You are not being tracked by your carrier, or not viewing this on a mobile network.</p>
+                    </div>
+                </div>
+    '''
+    
+    def filter_request_params(self, params):
+        ''' Filter request params to remove tracking headers. '''
+        
+        return self.filter_params(params)
+        
+    def filter_response_params(self, params):
+        ''' Filter response params to remove tracking headers. '''
+
+        return self.filter_params(params)
+        
+    def filter_params(self, params):
+        BAD_HEADERS = {
+            'UIDH': 'Verizon Unique Identifier Header', 
+            'ACR': 'AT&T',
+            'VF_ACR': 'Vodafone',
+            'UP_SUBNO': 'AT&T',
+            'UP_VODACOMGW_SUBID': '',
+            'PIPER_ID': '',
+            'MSISDN': ''
+            }
+        # !! do we really need to look for all these prefixes?
+        # diffferent press reports and sample code show them differently
+        PREFIXES = ['HTTP_X_', 'X_', 'X-']
+        
+        for suffix in BAD_HEADERS:
+            source = BAD_HEADERS[suffix]
+            for prefix in PREFIXES:
+                params = self.remove_param(params, 
+                    prefix + suffix, 'Tracking header from {}'.format(source))
+        
+        return params
+        
 class BreachVulnFilter(WebFilter):
     ''' Disable http compression to avoid BREACH vuln. 
     
@@ -366,7 +476,7 @@ class SpoofUserAgentFilter(WebFilter):
         ''' Replace user-agent. '''
 
         # use common user-agent strings to hide in the crowd
-        # eff panopticon pages seem to be inaccessible. stunning, i know.
+        
         # 2013-06 chrome seems to be most common, then firefox
         #     https://en.wikipedia.org/wiki/Usage_share_of_web_browsers
         # agent strings
@@ -376,7 +486,12 @@ class SpoofUserAgentFilter(WebFilter):
         chrome_common_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1667.0 Safari/537.36'
         firefox_common_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0'
         common_agent = chrome_common_agent
+        # Panopticlick (https://panopticlick.eff.org/index.php?action=log)
+        # reports apple_android_agent as one in 1568125.67 browsers
+        # this is very bad
         apple_android_agent = 'Mozilla/5.0 (Linux; U; Android 2.2; en-sa; HTC_DesireHD_A9191 Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1'
+        apple_ipad_agent = 'Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405'
+        # many more at http://www.useragentstring.com/pages/Browserlist/
         
         if 'User-agent' in params:
             old_value = params['User-agent']
@@ -384,9 +499,9 @@ class SpoofUserAgentFilter(WebFilter):
             old_value = ''
             
         if 'Apple' in old_value:
-            new_value = common_agent
+            new_value = firefox_common_agent
         else:
-            new_value = apple_android_agent
+            new_value = chrome_common_agent
         params['User-agent'] = new_value
         self.log.debug('"User-agent" replaced to avoid browser tracking. old: {}, new: {}'.
             format(old_value, new_value))
@@ -494,6 +609,7 @@ def proxy(ca_name=None, ca_file=None):
         mitm_proxy.register_interceptor(LogFilter)
         mitm_proxy.register_interceptor(LogUrlFilter)
     mitm_proxy.register_interceptor(HtmlFirewallFilter)
+    mitm_proxy.register_interceptor(TrackingBeaconFilter)
     mitm_proxy.register_interceptor(BreachVulnFilter)
     mitm_proxy.register_interceptor(NoRefererFilter)
     mitm_proxy.register_interceptor(CookieFilter)

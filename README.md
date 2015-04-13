@@ -12,6 +12,16 @@ GoodCrypto Web does not protect you from exposing your own identity. If you prov
 Executables, video, audio, and images can carry tracking bugs and malware, so safe browsing does not include them. The web looks much calmer. Some sites complain when they can't track you. They claim your system is misconfigured. Ignore them.
 
 
+##Repository
+
+This repository acts as a backup for the source code. We strongly encourage users to <a href="https://goodcrypto.com/server/download/">download the ISO</a> which includes full source code and is preconfigured.
+
+
+##Dependencies
+
+goodcrypto-libs
+
+
 ##Kudos
 
 Thanks to the authors and contributors of tor, openssl, debian, pymyproxy, and all the other open source projects which GoodCrypto uses.
