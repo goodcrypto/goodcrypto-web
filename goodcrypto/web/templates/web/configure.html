@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% comment %}
+
+    Copyright 2014 GoodCrypto
+    Last modified: 2014-10-11
+    
+{% endcomment %}
+{% load i18n custom %}
+
+{% block contentpane %}
+
+    <h1 class="headline">
+        Configure Browsers to Use GoodCrypto
+    </h1>  
+
+    <p class="dropcap">
+       For each user:
+    </p>
+    <ol>
+        <li>
+            Add the GoodCrypto web certificate to your organization's certificate authority white list,
+            or 
+            <a href="/web/">import the web certificate</a> for each browser.
+        </li>
+        <li>
+            <p>
+            Configure their browser to 
+            <a href="https://goodcrypto.com/qna/knowledge-base/configure-browsers/">use the GoodCrypto web proxy</a>. 
+            If you have any internal web servers, then you probably want
+            to exclude those servers from using the proxy.
+            </p>
+        </li>
+    </ol>
+    <p class="dropcap">
+       Each user that uses the GoodCrypto Web proxy reduces tracking of their online activity and 
+       the possibility of their computer being cracked. 
+    </p>
+
+{% endblock contentpane %}
+

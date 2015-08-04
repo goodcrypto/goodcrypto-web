@@ -1,0 +1,55 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+'''
+    Copy latest build of goodcrypto web to live chroot dir
+    
+    Copyright 2014 GoodCrypto
+    Last modified: 2014-08-29
+'''
+
+# delete in python 3
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+import sh, os.path
+
+import syr.fs
+from syr.log import get_log
+
+log = get_log()
+
+from dbuild.configs.shared import Settings as SharedSettings
+from dbuild.configs.web.shared import Settings as WebSettings
+
+GOODCRYPTO_WEB = 'web'
+LIVE_DIR = os.path.join(SharedSettings.GOODCRYPTO_CHROOT_DIR, GOODCRYPTO_WEB)
+
+log.debug('stop goodcrypto web')
+try:
+    sh.goodcrypto_web.stop()
+except sh.ErrorReturnCode:
+    pass
+
+if os.path.exists(LIVE_DIR):
+    try:
+        log.debug('umount all {}'.format(LIVE_DIR))
+        syr.fs.umount_all(LIVE_DIR)
+    except sh.ErrorReturnCode:
+        processes = sh.fprocess(LIVE_DIR).stdout.trim()
+        if processes:
+            message = 'output root dir in use by:\n{}'.format(processes)
+            log.debug(message)
+            print(message)
+        raise
+    sh.rm('--force', '--recursive', 
+        os.path.join(LIVE_DIR))
+
+log.debug('copy {} to {}'.format(WebSettings.OUTPUT_ROOT_DIR, LIVE_DIR))
+sh.mkdir('--parents', SharedSettings.GOODCRYPTO_CHROOT_DIR)
+sh.cp('--archive', WebSettings.OUTPUT_ROOT_DIR, LIVE_DIR)
+
+log.debug('start goodcrypto web')
+sh.goodcrypto_web.start()
+

@@ -1,0 +1,17 @@
+{% comment %}
+
+    Copyright 2014 GoodCrypto
+    Last modified: 2014-03-12
+
+{% endcomment %}
+{% load i18n %}
+
+<div class="row">
+    <div class="col-md-1">
+        <strong>SHA1:</strong>
+    </div>
+    <div class="col-md-10">
+        {{ fingerprint|default:"" }}
+    </div>
+</div> 
+

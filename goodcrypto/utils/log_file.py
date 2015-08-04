@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-    Copyright 2014 GoodCrypto
-    Last modified: 2014-12-04
+    Copyright 2014-2015 GoodCrypto
+    Last modified: 2015-01-04
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -10,7 +10,7 @@ from __future__ import print_function
 
 import os, re, sh, sys, time
 from syr.log import get_log
-from syr.utils import caller_module_name
+from syr.python import caller_module_name
 from traceback import format_exc
 #from syr.sync_function import synchronized
 
@@ -65,7 +65,7 @@ class LogFile(object):
             
         # strip off standard python extensions
         if filename.endswith('.py') or filename.endswith('.pyc'):
-            filename, _, _ = filename.rpartition('.')
+            filename, __, __ = filename.rpartition('.')
         
         if not filename.endswith('.log'):
             filename = '{}.log'.format(filename)
@@ -124,7 +124,7 @@ class LogFile(object):
                 filename = '{}.x'.format(self.log.pathname)
             with open(filename, 'at') as f:
                 t = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-                f.write('{} {}\n'.format(t, message))
+                f.write('{} {}\n'.format(t, repr(message)))
             #from syr.log import _debug, _DEFAULT_PERMS
             #_debug(message, force=True, filename=filename, mode=_DEFAULT_PERMS)
 

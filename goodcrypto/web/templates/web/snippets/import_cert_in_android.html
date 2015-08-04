@@ -1,0 +1,37 @@
+{% comment %}
+
+    Copyright 2014 GoodCrypto
+    Last modified: 2014-01-16
+
+{% endcomment %}
+
+<p class="dropcap">Android</p>
+
+<ol>
+    <li>Copy the certificate file to the /sdcard folder. You can use the file manager or
+    <strong>adb push</strong>.</li>
+    <li>Go into adb shell ( adb shell from commandline), or open the 'terminal'-application on your android device. You will get a command prompt similar like shell@android:/ $ Gain superuser/root rights, neccessary to perform privileged actions:
+
+su
+
+Make the /system folder writable (will return to read-only upon reboot):
+
+mount -o remount,rw /system
+
+Copy the new certificate files to the correct folder on your Android device:
+
+cp /sdcard/5ed36f99.0 /system/etc/security/cacerts/
+cp /sdcard/e5662767.0 /system/etc/security/cacerts/
+
+Correct the file permissions to u=rw, g=r, o=r:
+
+cd /system/etc/security/cacerts/
+chmod 644 5ed36f99.0
+chmod 644 e5662767.0
+
+
+    <li>Look for the <strong>Preferences</strong> or <strong>Options</strong> for your browser.</li>
+    <li>You'll likely find a tab or button which lets you manage certificate or 
+    <li>Close all the windows and dialog boxes until you have returned to your main browser window.</li>
+</ol>
+

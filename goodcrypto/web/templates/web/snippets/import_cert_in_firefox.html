@@ -1,0 +1,42 @@
+{% comment %}
+
+    Copyright 2014 GoodCrypto
+    Last modified: 2014-01-17
+
+{% endcomment %}
+
+<p class="dropcap">Firefox</p>
+<ol>
+    <li>Select <strong>Preferences</strong> from the <strong>Edit</strong> menu.<br/>
+        If you're running Firefox on Mac, then select <strong>Preferences...</strong> from the <strong>Firefox</strong> menu.
+    </li>
+    <li>Click the <strong>Advanced</strong> icon at the top of the dialog box.</li>
+    <li>Click the <strong>Encryption</strong> tab, and then the <strong>Authorities</strong> tab.</li>
+    <li>Click the <strong>View certificates</strong> button.</li>
+    <li>Click the <strong>Import</strong> button.</li>
+    <li>Locate the file that you saved in Step 1 of these instructions and <strong>hightlight</strong> the filename and <strong>Open</strong> it.
+    <li>If Firefox pops up the warning, "This certificate is already installed as a certificate authority", then
+        <a data-toggle="modal" data-target="#FirefoxWarning" href="#GoodCryptoDefined">click here</a>
+    <li>Another dialog will pop up that asks, "Do you want to trust "CA Cert Signing Authority" for the following purposes?".</li>
+    <li>Add a check mark in the <strong>Trust this CA to identify web sites</strong> box and click the <strong>OK</strong> button.</li>
+    <li>Close all the windows and dialog boxes until you have returned to your main browser window.</li>
+</ol>
+
+<div class="modal" id="FirefoxWarning">
+  <div class="modal-dialog"><div class="modal-content"><div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h4 class="modal-title">If Firefox pops up the warning, "This certificate is already installed as a certificate authority", then</h4>
+    <div class="modal-body">
+    <br/>
+    <p>
+        <ol>
+            <li>Click the <strong>OK</strong> button</li>
+            <li>Highlight the <strong>ca.mitm.com</strong> item in the list</li>
+            <li>Click the <strong>Delete or Distrust</strong> button and confirm when prompted</li>
+            <li>Resume the procedure by restarting with <strong>Click the Import button</strong> step.
+        </ol>
+    </p>
+    </div>
+  </div></div></div>
+</div>
+
