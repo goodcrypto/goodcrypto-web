@@ -1,6 +1,6 @@
 '''
     Copyright 2014 GoodCrypto
-    Last modified: 2014-09-29
+    Last modified: 2015-02-16
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -69,14 +69,14 @@ class WebAPI(object):
                 self.log_attempted_access('Attempted GET connection')
                 
                 log('redirecting api GET request to website')
-                response = HttpResponsePermanentRedirect(api_constants.SYSTEM_API_URL)
+                response = HttpResponsePermanentRedirect('/')
                         
             if response is None:
                 response = self.get_api_response(request, result)
                 
         except:
             log(format_exc())
-            response = HttpResponsePermanentRedirect(api_constants.SYSTEM_API_URL)
+            response = HttpResponsePermanentRedirect('/')
     
         return response
     

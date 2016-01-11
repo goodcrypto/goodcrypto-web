@@ -12,12 +12,15 @@
       
     Certificate authority file is written to ca_file, specified below.
     Import the cert file into your browser. Firefox example:
-       * Edit / Preferences / Advanced / Encryption / View Certificates / Authorities / Import
+       * Edit / Preferences / Advanced / Encryption / View Certificates / Authorities
+       * If you have an old version of the cert:
+         * Select the old cert
+         * "Delete or distrust" 
+       * "Import"
        * Select the ca_file
-    You may have to delete an earlier version of the cert from your browser first.
    
     Copyright 2014 GoodCrypto
-    Last modified: 2014-12-05
+    Last modified: 2015-02-05
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -160,7 +163,12 @@ class WebFilter(miproxy.proxy.RequestInterceptorPlugin, miproxy.proxy.ResponseIn
         '''
             
         # parsing also decompresses and decodes to unicode
-        prefix, params, data = syr.http.parse_response(response)
+        try:
+            prefix, params, data = syr.http.parse_response(response)
+        except IOError as ioe:
+            log.debug(traceback.format_exc())
+            raise
+            
         return prefix, params, data
         
     def filter_html(self, html):

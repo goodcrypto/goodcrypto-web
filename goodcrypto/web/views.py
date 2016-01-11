@@ -1,8 +1,8 @@
 '''
     Web views
 
-    Copyright 2014 GoodCrypto
-    Last modified: 2014-10-23
+    Copyright 2014-2015 GoodCrypto
+    Last modified: 2015-02-16
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -14,7 +14,6 @@ from django.shortcuts import render_to_response
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.template import RequestContext
 
-from goodcrypto.api_constants import SYSTEM_API_URL
 from goodcrypto.web.api import WebAPI
 from goodcrypto.web.constants import CA_FILE
 from syr.log import get_log
@@ -111,7 +110,7 @@ def configure(request):
     
     template = 'web/configure.html'
     return render_to_response(template, context_instance=RequestContext(request))
-    
+
 def api(request):
     '''Interface with the goodcrypto server through the API.
     
@@ -119,11 +118,18 @@ def api(request):
     '''
 
     try:
-        response = WebAPI().interface(request)
+        referer = request.META.get('HTTP_REFERER', 'unknown')
+        http_user_agent = request.META.get('HTTP_USER_AGENT', 'unknown')
+        remote_ip = get_remote_ip(request)
+        log.write('{} called web api from {} with {} user agent'.format(remote_ip, referer, http_user_agent))
+        if remote_ip == '127.0.0.1':
+            response = WebAPI().interface(request)
+        else:
+            # redirect attempts at using the api from outside the localhost
+            response = HttpResponsePermanentRedirect('/')
     except:
         log.write(format_exc())
-        response = HttpResponsePermanentRedirect(SYSTEM_API_URL)
+        response = HttpResponsePermanentRedirect('/')
 
     return response
-
 

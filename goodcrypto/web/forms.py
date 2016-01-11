@@ -1,8 +1,8 @@
 '''
     Web app forms.
 
-    Copyright 2014 GoodCrypto
-    Last modified: 2014-09-24
+    Copyright 2014-2015 GoodCrypto
+    Last modified: 2015-02-17
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -10,9 +10,9 @@ from traceback import format_exc
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext_lazy as _
 
 from goodcrypto import api_constants
+from goodcrypto.utils import i18n
 from syr.log import get_log
 
 log = get_log()
@@ -28,5 +28,5 @@ class APIForm(forms.Form):
     
     action = forms.ChoiceField(required=False, 
        choices=API_Actions,
-       error_messages={'required': _('You must select an action.')})
+       error_messages={'required':i18n('You must select an action.')})
 
