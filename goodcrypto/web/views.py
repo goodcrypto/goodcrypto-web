@@ -2,7 +2,7 @@
     Web views
 
     Copyright 2014-2015 GoodCrypto
-    Last modified: 2015-02-16
+    Last modified: 2015-04-12
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -16,6 +16,7 @@ from django.template import RequestContext
 
 from goodcrypto.web.api import WebAPI
 from goodcrypto.web.constants import CA_FILE
+from reinhardt.utils import is_secure_connection
 from syr.log import get_log
 
 log = get_log()
@@ -24,6 +25,7 @@ def home(request):
     '''Show the home page.'''
 
     form_template = 'web/home.html'
+    is_secure = is_secure_connection(request)
     if request.method == 'POST':
         
         log('post: {}'.format(request.POST))
@@ -37,17 +39,17 @@ def home(request):
                     response = HttpResponseRedirect('/web/show_fingerprint/')
                 else:
                     response = render_to_response(
-                        form_template, {'fingerprint': get_fingerprint()}, 
+                        form_template, {'fingerprint': get_fingerprint(), 'secure': is_secure}, 
                         context_instance=RequestContext(request))
             else:
                 log('POST: {}'.format(request.POST))
-                response = render_to_response(form_template, context_instance=RequestContext(request))
+                response = render_to_response(form_template, {'secure': is_secure}, context_instance=RequestContext(request))
         except Exception:
             log(format_exc())
             response = render_to_response(form_template, context_instance=RequestContext(request))
     else:
         response = render_to_response(
-            form_template, {'fingerprint': get_fingerprint()}, context_instance=RequestContext(request))
+            form_template, {'fingerprint': get_fingerprint(), 'secure': is_secure}, context_instance=RequestContext(request))
 
     return response
 

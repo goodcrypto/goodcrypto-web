@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% comment %}
 
-    Copyright 2014 GoodCrypto
-    Last modified: 2014-12-05
+    Copyright 2014-2015 GoodCrypto
+    Last modified: 2015-04-04
     
 {% endcomment %}
 {% load i18n custom %}
@@ -22,6 +22,12 @@
     <h3>Web</h3> 
 </div>
 
+{% if not secure %}
+    <a href="/make_secure/" title="{% trans 'Describe how to make the connection secure.' %}">
+        <button type="button" class="btn btn-primary">&nbsp;{% trans 'Make connection secure' %}&nbsp;</button>
+    </a>
+{% endif %}
+
 <div class="row">
     <p class="dropcap">
     Follow these simple steps so you can visit websites using SSL (i.e., https).
@@ -30,23 +36,20 @@
 
 <div class="row">&nbsp;</div>
 <div class="row">
-    <div class="col-md-1">&nbsp;</div>
     <div class="col-md-9">
-        <a href="/web/get_cert/"><span class="double">1 </span> Save the certificate</a> on your local computer
+        <span class="double">1. </span> <a href="/web/get_cert/">Save the certificate</a> on your local computer
     </div>
 </div>
 <div class="row">&nbsp;</div>
 <div class="row">
-    <div class="col-md-1">&nbsp;</div>
     <div class="col-md-9">
-        <a data-toggle="modal" data-target="#Verify" href="#Verify"><span class="double">2 </span> Verify the fingerprint</a>
+        <span class="double">2. </span> <a data-toggle="modal" data-target="#Verify" href="#Verify">Verify the fingerprint</a>
     </div>
 </div>
 <div class="row">&nbsp;</div>
 <div class="row">
-    <div class="col-md-1">&nbsp;</div>
     <div class="col-md-9">
-        <a data-toggle="modal" data-target="#Import" href="#Import"><span class="double">3 </span> Import</a> the certificate into your browser
+        <span class="double">3. </span> <a data-toggle="modal" data-target="#Import" href="#Import">Import</a> the certificate into your browser
     </div>
 </div>
 

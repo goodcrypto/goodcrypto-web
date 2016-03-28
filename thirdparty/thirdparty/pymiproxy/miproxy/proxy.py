@@ -10,7 +10,7 @@
                     Name of certificate as param
                     Timeout as global var
                     
-    Last modified: 2014-10-23
+    Last modified: 2015-04-16
 '''
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from urlparse import urlparse, urlunparse, ParseResult
@@ -27,6 +27,8 @@ from traceback import format_exc
 from OpenSSL.crypto import (X509Extension, X509, dump_privatekey, dump_certificate, load_certificate, load_privatekey,
                             PKey, TYPE_RSA, X509Req)
 from OpenSSL.SSL import FILETYPE_PEM
+
+from syr.utils import randint
 
 from syr.log import get_log
 log = get_log()
@@ -64,6 +66,7 @@ class CertificateAuthority(object):
     def __init__(self, ca_name=None, ca_file=None, cache_dir=None):
         self.ca_name = ca_name or DEFAULT_CA_NAME
         self.ca_file = ca_file or DEFAULT_CA_FILE
+        log.debug('using ca cert file {}'.format(self.ca_file))
         self.cache_dir = cache_dir or gettempdir()
         self._serial = self._get_serial()
         if path.exists(self.ca_file):
@@ -83,13 +86,14 @@ class CertificateAuthority(object):
         return s
 
     def _generate_ca(self):
+        ''' Generate certificate authority's own certificate '''
+        
         # Generate key
         self.key = self._gen_key()
 
-        # Generate certificate
         self.cert = X509()
         self.cert.set_version(3)
-        self.cert.set_serial_number(1)
+        self.cert.set_serial_number(randint()) # (1)
         self.cert.get_subject().CN = self.ca_name
         self.cert.gmtime_adj_notBefore(0)
         self.cert.gmtime_adj_notAfter(315360000)
@@ -106,6 +110,7 @@ class CertificateAuthority(object):
             X509Extension("authorityKeyIdentifier", False, "keyid:always", issuer=self.cert),
             ])
         """
+        # sha1 is crap. do we really need it for compatibility? 
         self.cert.sign(self.key, "sha1")
 
         self.write_ca(self.ca_file, self.cert, self.key)
@@ -135,6 +140,7 @@ class CertificateAuthority(object):
         chmod(cert_file+KEY_EXT, 0600)
 
     def __getitem__(self, cn):
+        ''' Create new site certificate signed by our certificate authority ''' 
         cnp = path.sep.join([self.cache_dir, '{}{}{}'.format(TEMP_CERT_PREFIX, cn, CERT_SUFFIX)])
         if not path.exists(cnp):
             # create certificate
@@ -222,9 +228,12 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
 
     def do_CONNECT(self):
+        ''' Connect unencrypted without sending url path. 
+            Start ssl. Reconnect and send full url. ''' 
         self.is_connect = True
         try:
-            # Connect to destination first
+            # Don't send url in clear until we get an ssl connection
+            # Connect to destination first 
             self._connect_to_host()
 
             # If successful, let's do this!
@@ -233,15 +242,18 @@ class ProxyHandler(BaseHTTPRequestHandler):
             #self.request.sendall('%s 200 Connection established\r\n\r\n' % self.request_version)
             self._transition_to_ssl()
         except Exception, e:
+            log.debug(format_exc())
             self.send_error(500, str(e))
             return
 
+        # We're now using ssl, so send the full url
         # Reload!
         self.setup()
         self.ssl_host = 'https://%s' % self.path
         try:
             self.handle_one_request()
         except Exception as exc:
+            log.debug('error while connecting to {}'.format(self.ssl_host))
             log.debug(format_exc())
             print(exc)
             raise exc
@@ -251,9 +263,10 @@ class ProxyHandler(BaseHTTPRequestHandler):
         # Is this an SSL tunnel?
         if not self.is_connect:
             try:
-                # Connect to destination
+                # Connect to destination                    
                 self._connect_to_host()
             except Exception, e:
+                log.debug(format_exc())
                 self.send_error(500, str(e))
                 return
             # Extract path
@@ -385,4 +398,5 @@ if __name__ == '__main__':
         proxy.serve_forever()
     except KeyboardInterrupt:
         proxy.server_close()
+
 
