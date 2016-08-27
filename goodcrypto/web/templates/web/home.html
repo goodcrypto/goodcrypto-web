@@ -1,253 +1,99 @@
 {% extends "base.html" %}
 {% comment %}
 
-    Copyright 2014-2015 GoodCrypto
-    Last modified: 2015-04-04
-    
+    Copyright 2015 GoodCrypto
+    Last modified: 2015-12-05
+
 {% endcomment %}
 {% load i18n custom %}
 
   {% block meta_keywords %}
-  <meta name="Keywords" content="privacy, surfing web">
+  <meta name="Keywords" content="privacy, encryption, email, surfing web">
   {% endblock meta_keywords %}
   {% block meta_description %}
   <meta name="Description" content="GoodCrypto protect everyone in your organisation.">
   {% endblock meta_description %}
-  
-  {% block titlevar %}Web{% endblock %}
+
+{% block titlevar %}{% trans 'Web' %}{% endblock %}
 
 {% block contentpane %}
 
-<div class="row">
-    <h3>Web</h3> 
-</div>
+    {% include "snippets/secure_button.html" %}
 
-{% if not secure %}
-    <a href="/make_secure/" title="{% trans 'Describe how to make the connection secure.' %}">
-        <button type="button" class="btn btn-primary">&nbsp;{% trans 'Make connection secure' %}&nbsp;</button>
-    </a>
-{% endif %}
-
-<div class="row">
-    <p class="dropcap">
-    Follow these simple steps so you can visit websites using SSL (i.e., https).
-    </p>
-</div>
-
-<div class="row">&nbsp;</div>
-<div class="row">
-    <div class="col-md-9">
-        <span class="double">1. </span> <a href="/web/get_cert/">Save the certificate</a> on your local computer
+    <div class="row">
+        <h3>Web</h3>
     </div>
-</div>
-<div class="row">&nbsp;</div>
-<div class="row">
-    <div class="col-md-9">
-        <span class="double">2. </span> <a data-toggle="modal" data-target="#Verify" href="#Verify">Verify the fingerprint</a>
-    </div>
-</div>
-<div class="row">&nbsp;</div>
-<div class="row">
-    <div class="col-md-9">
-        <span class="double">3. </span> <a data-toggle="modal" data-target="#Import" href="#Import">Import</a> the certificate into your browser
-    </div>
-</div>
 
-<div class="modal" id="Verify">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-body">
-        <div class="row">
-            <div class="col-md-12">
+    <div class="col-md-6 col-xm-6">
+        <div class="row">&nbsp;</div>
+        <div class="table-responsive btn-group">
+            <table class="table table-responsive">
+                <tr>
+                    <th>
+                        <p>&nbsp;</p>
+                        {% trans 'Configure browser' %}
+                        <p>&nbsp;</p>
+                    </th>
+                    <td>
+                        <p>&nbsp;</p>
+                        <a href="https://goodcrypto.com/qna/knowledge-base/configure-browsers/"
+                           title="{% trans 'Configure your browser to make it harder to track you or crack your computer.' %}">
+                            <button type="button" class="btn btn-primary btn-block">{% trans 'Reduce tracking' %}</button>
+                        </a>
+                        </a>
+                        <p>&nbsp;</p>
+                    </td>
+                    <td>
+                        <p>&nbsp;</p>
+                        <a href="/web/certificate/"title="{% trans 'Import the web certificate so you can visit websites using https://' %}">
+                            <button type="button" class="btn btn-primary btn-block">{% trans 'Access https sites' %}</button>
+                        </a>
+                        <p>&nbsp;</p>
+                    </td>
+                </tr>
+{% comment %}
+                <tr>
+                    <th>
+                        <p>&nbsp;</p>
+                        {% trans 'Administrator' %}
+                        <p>&nbsp;</p>
+                    </th>
+                    <td>
+                        <p>&nbsp;</p>
+                        <a href="/admin/web/options/" title="{% trans 'Manage options for browsing and Tor.' %}">
+                            <button type="button" class="btn btn-primary btn-block">{% trans 'Options' %}</button>
+                        </a>
+                        <p>&nbsp;</p>
+                    </td>
+                    <td>
+                        <p>&nbsp;</p>
+
+                        <p>&nbsp;</p>
+                    </td>
+                </tr>
+{% endcomment %}
+                {# blank row to get all the buttons to line up #}
+                <tr>
+                    <th>
+                        &nbsp;
+                    </th>
+                    <td>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </td>
+                </tr>
+            </table>
+            <div class="row">&nbsp;</div>
+            <div class="row">
                 <p class="dropcap">
-                {% include 'web/snippets/fingerprint_description.html' %}
+                    After you complete both the above steps, you're ready to continue browsing the way you always have knowing
+                    that it's much harder to crack your system and track your online activity.
                 </p>
             </div>
-        </div>
 
-        <div class="row">&nbsp;</div>
-        
-        {% include 'web/snippets/fingerprint.html' %}
-    </div>
-  </div></div>
-</div>
-    
-<div id="tabContent" class="tab-content">
-<div class="modal" id="Import">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-body">
-    <p class="dropcap">
-        Click on the name of the browser that you use so you can follow the detailed instructions.
-    </p>
-        <div class="row">
-            <div class="col-md-1">&nbsp;</div>
-            <div class="col-md-2">
-                <ul>
-                    <li><a href="#subtabs-1" data-toggle="tab"><h5>Chrome</h5></a></li>
-                    <li><a href="#subtabs-2" data-toggle="tab"><h5>Internet Explorer</h5></a></li>
-                    <li><a href="#subtabs-3" data-toggle="tab"><h5>Firefox</h5></a></li>
-                </ul>
-            </div>
-            <div class="col-md-2">
-                <ul>
-                    <li><a href="#subtabs-4" data-toggle="tab"><h5>Safari</h5></a></li>
-                    <li><a href="#subtabs-5" data-toggle="tab"><h5>Android</h5></a></li>
-                    <li><a href="#subtabs-6" data-toggle="tab"><h5>Opera</h5></a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="row">
-            <p>If you're using a browser not listed above, then you search online
-            for instructions about importing a <strong>root certificate</strong>. 
-            If you send details about the OS and browser to our 
-            <a href="https://goodcrypto.com/contacts/">tech support</a>, then 
-            we may be able to help.</p>
         </div>
     </div>
-  </div></div>
-</div>
-    
-<div class="modal" id="Done">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-body">
-    <p class="dropcap">
-        You're ready to continue browsing the way you always have knowing that
-        it's much harder to crack your system.
-    </p>
-    </div>
-  </div></div>
-</div>
-    
-    <div class="tab-pane fade" id="subtabs-1">
-        {% include 'web/snippets/import_cert_in_chrome.html' %}
-    </div>
-    
-    <div class="tab-pane fade" id="subtabs-2">
-        {% include 'web/snippets/import_cert_in_ie.html' %}
-    </div>
-    
-    <div class="tab-pane fade" id="subtabs-3">
-        {% include 'web/snippets/import_cert_in_firefox.html' %}
-    </div>
-    
-    <div class="tab-pane fade" id="subtabs-4">
-        {% include 'web/snippets/import_cert_in_safari.html' %}
-    </div>
-    
-    <div class="tab-pane fade" id="subtabs-5">
-        {% include 'web/snippets/import_cert_in_android.html' %}
-    </div>
-    
-    <div class="tab-pane fade" id="subtabs-6">
-        {% include 'web/snippets/import_cert_in_opera.html' %}
-    </div>
-</div>
-
-<noscript>
-<div class="row">&nbsp;</div>
-<div class="row">&nbsp;</div>
-<div class="row">&nbsp;</div>
-<a name="Verify"></a><h3>Verify the fingerprint</h3>
-        <div class="row">
-            <div class="col-md-12">
-                <p class="dropcap">
-                {% include 'web/snippets/fingerprint_description.html' %}
-                </p>
-            </div>
-        </div>
-
-        <div class="row">&nbsp;</div>
-        
-        {% include 'web/snippets/fingerprint.html' %}
-    
-<a name="Import"></a><h3>Import the certificate</h3>
-    <div class="row">
-        <div class="col-md-12">
-    <p class="dropcap">
-        Click on the name of the browser that you use so you can follow the detailed instructions.
-    </p>
-        <div class="row">
-            <div class="col-md-1">&nbsp;</div>
-            <div class="col-md-2">
-                <ul>
-                    <li><a href="#subtabs-1"><h5>Chrome</h5></a></li>
-                    <li><a href="#subtabs-2"><h5>Internet Explorer</h5></a></li>
-                    <li><a href="#subtabs-3"><h5>Firefox</h5></a></li>
-                </ul>
-            </div>
-            <div class="col-md-2">
-                <ul>
-                    <li><a href="#subtabs-4"><h5>Safari</h5></a></li>
-                    <li><a href="#subtabs-5"><h5>Android</h5></a></li>
-                    <li><a href="#subtabs-6"><h5>Opera</h5></a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="row">
-            <p>If you're using a browser not listed above, then you search online
-            for instructions about importing a <strong>root certificate</strong>. 
-            If you send details about the OS and browser to our 
-            <a href="https://goodcrypto.com/contact/">tech support</a>, then 
-            we may be able to help.</p>
-        </div>
-    </div>
-  </div></div>
-</div>
-    
-<a name="Done"></a><h3>Done</h3>
-    <div class="row">
-        <div class="col-md-12">
-        <p class="dropcap">
-            You're ready to continue browsing the way you always have knowing that
-            it's much harder to crack your system.
-        </p>
-        </div>
-  </div>
-
-<hr/>
-<hr/>
-
-<div class="row">
-    <div class="col-md-12">
-        <a name="subtabs-1"></a>
-        {% include 'web/snippets/import_cert_in_chrome.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-12">
-        <a name="subtabs-2"></a>
-        {% include 'web/snippets/import_cert_in_ie.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-12">
-        <a name="subtabs-3"></a><h3>Firefox</h3>
-        {% include 'web/snippets/import_cert_in_firefox.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-12">
-        <a name="subtabs-4"></a>
-        {% include 'web/snippets/import_cert_in_safari.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-12">
-        <a name="subtabs-5"></a>
-        {% include 'web/snippets/import_cert_in_android.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-12">
-        <a name="subtabs-6"></a>
-        {% include 'web/snippets/import_cert_in_opera.html' %}
-    </div>
-</div>
-</noscript>
-
 {% endblock contentpane %}
 

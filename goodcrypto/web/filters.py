@@ -1,125 +1,155 @@
-#! /usr/bin/env python
+#! /usr/bin/python
 # -*- coding: utf-8 -*-
 
 '''
     Web filters.
-    
+
     Requirements
-      
+
       * tor
       * pymiproxy
       * goodcrypto web
-      
+
+    To use openssl version of proxy, search for openssl in this file to see necessary changes.
+
     Certificate authority file is written to ca_file, specified below.
     Import the cert file into your browser. Firefox example:
        * Edit / Preferences / Advanced / Encryption / View Certificates / Authorities
        * If you have an old version of the cert:
          * Select the old cert
-         * "Delete or distrust" 
+         * "Delete or distrust"
        * "Import"
        * Select the ca_file
-   
+
     Copyright 2014 GoodCrypto
-    Last modified: 2015-02-05
+    Last modified: 2015-11-05
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
 
-# drop privileges immediately
-# !! this only appears to work on the dev system
-#    on the dist system the python sh module suddenly decides its globals 
-#    are all set to None.
-# ideally this program should have been launched as an unprivileged user 
-from goodcrypto.web.constants import USER, HTTP_PROXY_PORT, TOR_PORT
-from syr.user import drop_privileges
+# drop privs before we have a syr log
+import os, sys, traceback
+
 try:
-    drop_privileges(USER)
-    dropped_privileges = True
-except:
-    dropped_privileges = False
 
-from goodcrypto.constants import HTTP_PROXY_URL, WARNING_WARNING_WARNING_TESTING_ONLY_DO_NOT_SHIP
+    print('start {}'.format(__file__)) # DEBUG
 
-# torify must be called before any imports that may do net io
-from syr.net import torify
-torify(port=TOR_PORT)
+    # drop privileges immediately
+    # ideally this program should have been launched as an unprivileged user
+    import syr.user
+    from goodcrypto.web.constants import USER
 
-from datetime import datetime
-import email.utils
+    syr.user.force(USER)
 
-from syr.times import now, timedelta_to_seconds
+except Exception as exc:
+    # no syr log yet
+    drop_privs_log_name = '/tmp/web.filter.drop.privs.log'
+    print('could not drop privileges')
+    with open(drop_privs_log_name, 'a') as drop_privs_log:
+        drop_privs_log.write('could not drop privileges\n')
+        drop_privs_log.write('{}\n'.format(exc))
+        drop_privs_log.write(traceback.format_exc() + '\n')
+        drop_privs_log.write('exiting\n')
+    print('details in {}'.format(drop_privs_log_name))
+    os._exit(-1)
 
-# delete in python 3
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+try:
 
-import httplib, os, re, sh, time, traceback, urlparse
-from HTMLParser import HTMLParser
-import miproxy.proxy
+    # delete in python 3
+    import sys
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
 
-import syr, syr.http, syr.utils
-from syr.html import firewall_html
-from syr.log import get_log
-from syr.fs import makedir, DEFAULT_PERMISSIONS_DIR_OCTAL
-from syr.process import program_from_port
+    from goodcrypto.constants import (
+        HTTP_PROXY_URL, WARNING_WARNING_WARNING_TESTING_ONLY_DO_NOT_SHIP)
 
-from goodcrypto.web.constants import (
-    SECURITY_DATA_DIR, CA_NAME, CA_FILE, USER, USER_GROUP, HTTP_PROXY_PORT)
+    # torify must be called before any imports that may do net io
+    from goodcrypto.web.constants import TOR_PORT
+    from syr.net import torify
+    torify(port=TOR_PORT)
 
-#miproxy.proxy.connect_timeout = 60 # seconds
+    from datetime import datetime
+    import email.utils
 
-log = get_log('web.filters.log', recreate=True)
+    from syr.times import now, timedelta_to_seconds
 
-if not os.path.isdir(SECURITY_DATA_DIR):
-    # both goodcrypto and www-data need read access to the web cert
-    makedir(SECURITY_DATA_DIR, owner=USER, group='www-data')
+    import httplib, os, re, sh, time, traceback, urlparse
+    from HTMLParser import HTMLParser
+    import miproxy.proxy
 
-encoding = 'utf8'
+    import syr, syr.http, syr.utils
+    from syr.html import firewall_html
+    from syr.log import get_log
+    from syr.fs import makedir, DEFAULT_PERMISSIONS_DIR_OCTAL
+    from syr.process import program_from_port
 
-mitm_proxy = None
+    from goodcrypto.web.constants import (
+        SECURITY_DATA_DIR, CA_NAME, CA_FILE, CA_COMMON_NAME, KEYS_DATA_DIR, USER, USER_GROUP, HTTP_PROXY_PORT)
 
-class WebFilter(miproxy.proxy.RequestInterceptorPlugin, miproxy.proxy.ResponseInterceptorPlugin):
+    log = get_log()
+
+    if not os.path.isdir(SECURITY_DATA_DIR):
+        # both goodcrypto and www-data need read access to the web cert
+        makedir(SECURITY_DATA_DIR, owner=USER, group='www-data')
+
+    encoding = 'utf8'
+
+    #miproxy.proxy.connect_timeout = 60 # seconds
+    mitm_proxy = None
+
+except Exception as exc:
+    print(traceback.format_exc())
+    from syr.log import get_log
+    log = get_log()
+    log.error(exc)
+    log.error(traceback.format_exc())
+    raise
+
+class WebFilter(
+    miproxy.proxy.RequestInterceptorPlugin,
+    miproxy.proxy.ResponseInterceptorPlugin):
 
     def __init__(self, *args, **kwargs):
-        
+
         logname = 'web.filter.{}.log'.format(self.__class__.__name__)
         self.log = get_log(logname, recreate=True)
-        
+
         super(WebFilter, self).__init__(*args, **kwargs)
 
     def do_request(self, request):
-                
+
         try:
-                
+
             prefix, params = self.filter_request(request)
             params = self.filter_request_params(params)
-            
+
             filtered_request = (
-                prefix + syr.http.http_eol + 
+                prefix + syr.http.http_eol +
                 syr.http.params_to_str(params) + syr.http.http_separator)
             if filtered_request != request:
-                self.log.debug('filtered request summary: {}'.format(self.summary(filtered_request))) #DEBUG
-                self.log.debug('request summary: {}, filtered request summary: {}'.format(len(request), len(filtered_request))) #DEBUG
+                self.log.debug('filtered request summary: {}'.
+                    format(self.summary(filtered_request))) #DEBUG
+                self.log.debug('request summary: {}, filtered request summary: {}'.
+                    format(len(request), len(filtered_request))) #DEBUG
                 request = filtered_request
-                
+
         except:
             # just log it
             self.report_exception()
-            
+
         return request
 
     def do_response(self, response):
-        
+
         try:
             prefix, params, data = self.filter_response(response)
             params = self.filter_response_params(params)
-            
+
             # filter html
             if syr.http.is_html(params):
-            
+
                 filtered_html = self.filter_html(data)
-                if filtered_html != data: 
+                if filtered_html != data:
                     data = filtered_html
                     #DEBUG self.log.debug('filtered html: {}'.format(data))
 
@@ -127,74 +157,77 @@ class WebFilter(miproxy.proxy.RequestInterceptorPlugin, miproxy.proxy.ResponseIn
             charset = syr.http.content_encoding_charset(params)
             if charset is not None:
                 data = data.encode(charset, 'ignore')
-            
+
             filtered_response = (
-                prefix + syr.http.http_eol + 
-                syr.http.params_to_str(params) + syr.http.http_separator + 
+                prefix + syr.http.http_eol +
+                syr.http.params_to_str(params) + syr.http.http_separator +
                 data)
             if filtered_response != response:
-                #self.log.debug('filtered response summary: {}'.format(self.summary(filtered_response))) #DEBUG
-                #self.log.debug('response summary: {}, filtered response summary: {}'.format(len(response), len(filtered_response))) #DEBUG
+                #self.log.debug('filtered response summary: {}'.
+                #    format(self.summary(filtered_response))) #DEBUG
+                #self.log.debug('response summary: {}, filtered response summary: {}'.
+                #    format(len(response), len(filtered_response))) #DEBUG
                 response = filtered_response
-                
+
         except:
-            self.log.debug('    response replaced by error response {}'.format(self.summary(response)))
+            self.log.debug('    response replaced by error response {}'.
+                format(self.summary(response)))
             response = self.report_exception()
-            
+
         return response
 
     def filter_request(self, request):
-        ''' Override this function to filter request. 
-        
-            Default is no filtering. 
-        
+        ''' Override this function to filter request.
+
+            Default is no filtering.
+
             Returns (prefix, params) so we don't parse the request twice.
         '''
 
         prefix, params = syr.http.parse_request(request)
         return prefix, params
-        
+
     def filter_response(self, response):
-        ''' Override this function to filter response. 
-        
-            Default is no filtering. 
-        
+        ''' Override this function to filter response.
+
+            Default is no filtering.
+
             Returns (prefix, params, data) so we don't parse the response twice.
         '''
-            
+
         # parsing also decompresses and decodes to unicode
         try:
             prefix, params, data = syr.http.parse_response(response)
         except IOError as ioe:
             log.debug(traceback.format_exc())
             raise
-            
+
         return prefix, params, data
-        
+
     def filter_html(self, html):
-        ''' Override this function to filter html. 
-        
-            Default is no filtering. 
+        ''' Override this function to filter html.
+
+            Default is no filtering.
         '''
-        
+
         return html
 
     def filter_request_params(self, params):
-        ''' Override this function to filter request params. 
-        
-            Default is no filtering. 
+        ''' Override this function to filter request params.
+
+            Default is no filtering.
         '''
-        
+
         return params
-    
+
     def filter_response_params(self, params):
-        ''' Override this function to filter response params. 
-        
-            Default is no filtering. 
+        ''' Override this function to filter response params.
+
+            Default is no filtering.
         '''
-        
+
         return params
-    
+
     def summary(self, data, bytes=1000):
         # indent
         line_separator = '\r\n   '
@@ -202,12 +235,12 @@ class WebFilter(miproxy.proxy.RequestInterceptorPlugin, miproxy.proxy.ResponseIn
         if summary_data != data:
             summary_data += '...'
         return line_separator + summary_data.replace(syr.http.http_eol, line_separator)
-    
+
     def report_exception(self):
         msg = 'filter: {}, \n{}'.format(self.__class__.__name__, traceback.format_exc())
         log.debug(msg)
         self.log.debug(msg)
-        
+
         html = '''
             <head>
                 <title>GoodCrypto Web error</title>
@@ -215,122 +248,126 @@ class WebFilter(miproxy.proxy.RequestInterceptorPlugin, miproxy.proxy.ResponseIn
             <body>
                 <h2>GoodCrypto Web error</h2>
                 Technical details:
-                
+
                 <pre>{}</pre>
             </body>
         '''.format(msg).strip()
         response = syr.http.create_response(httplib.INTERNAL_SERVER_ERROR, data=html)
-        
+
         return response
-    
+
     def remove_param(self, params, name, why):
         ''' Remove a header from params. '''
-    
+
         if name in params:
             value = params[name]
             del params[name]
             msg = '"{}: {}" deleted {}'.format(name, value, why)
             self.log.debug(msg)
-                
+
         return params
-    
+
 class HtmlFirewallFilter(WebFilter):
     ''' Firewall html.
-    
-            Clearly, the untrusted user's input should not be allowed 
-            to cause the application to run arbitrary programs.
-            
-            David A. Wheeler
-            Secure Programming for Linux and Unix
-    
+
+        Clearly, the untrusted user's input should not be allowed
+        to cause the application to run arbitrary programs.
+
+        David A. Wheeler
+        Secure Programming for Linux and Unix
+
         Default deny, then whitelist html.
-        
+
         Only allow plain html. For example, no executables.
         Css allows embedding of executables, and we don't have a css parser.
         So the 'style' tag and attribute are not allowed.
     '''
-    
+
     def filter_html(self, html):
         ''' Whitelist plain html.
-        
-            Whitelist good tags. Reject all others. For some tags start 
+
+            Whitelist good tags. Reject all others. For some tags start
             skipping html until tag is closed.
-            
+
             Blacklist bad attributes within tags.
         '''
-                
+
         return firewall_html(html)
 
 class TimeFilter(WebFilter):
-    ''' Track time as reported by http servers. 
-    
-        When the time is significantly off, it may indicate packet staining. 
+    ''' Track time as reported by http servers.
+
+        When the time is significantly off, it may indicate packet staining.
     '''
-    
+
     SECONDS_MARGIN = 30
-    
+
     def filter_response_params(self, params):
-        ''' Filter response params to track time. 
-        
+        ''' Filter response params to track time.
+
             If a host time is badly off from local time,
             log a warning.
-            
-            What we really need is to track consensus time from multple 
+
+            What we really need is to track consensus time from multple
             servers and alert user if local time is off too much.
         '''
 
         http_date = params.get('Date')
-        
+
         if http_date:
-            
+
             try:
                 host_time = datetime.fromtimestamp(
                     email.utils.mktime_tz(
                         email.utils.parsedate_tz(http_date)))
                 # self.log.debug('Datetime: {}'.format(host_time))
                 seconds_off = timedelta_to_seconds(host_time - now())
-                
+
             except Exception as exc:
-                self.log.debug('bad http_date: {}\n{}'.format(http_date, traceback.format_exc()))
-                
+                self.log.debug('bad http_date: {}\n{}'.
+                    format(http_date, traceback.format_exc()))
+
             else:
                 if abs(seconds_off) > self.SECONDS_MARGIN:
                     self.log.warning(
                         'host time off {} seconds from local time'.
                         format(seconds_off))
-                
+
         else:
             self.log.debug('missing date')
-                
+
         return params
-            
+
 class TrackingBeaconFilter(WebFilter):
     ''' Remove commom tracking beacon headers.
-    
-        Obviously what we really need is to default deny headers, and 
+
+        Obviously what we really need is to default deny headers, and
         whitelist only what's safe.
-        
-        See 
-          * [lessonslearned.org/sniff Simple test page for Cellular ISP tracking beacons - by Kenn White]
-          * [https://www.eff.org/deeplinks/2014/11/verizon-x-uidh Verizon Injecting Perma-Cookies to Track Mobile Customers, Bypassing Privacy Controls | Electronic Frontier Foundation]
+
+        See
+          * Simple test page for Cellular ISP tracking beacons - by Kenn White
+            http://lessonslearned.org/sniff
+          * Verizon Injecting Perma-Cookies to Track Mobile Customers, Bypassing Privacy Controls | Electronic Frontier Foundation
+            https://www.eff.org/deeplinks/2014/11/verizon-x-uidh
           * http://www.reddit.com/r/technology/comments/2kt1j6/somebodys_already_using_verizons_id_to_track/
           * https://web.archive.org/web/20141027194059/https://github.com/Funnerator/fast_tim_conf/blob/master/lua/id_set.lua
           * search: propublica.views.acrButton
-          
-        Propublica's code (http://www.reddit.com/r/technology/comments/2kt1j6/somebodys_already_using_verizons_id_to_track/)::
-        
+
+        Propublica's code from
+        http://www.reddit.com/r/technology/comments/2kt1j6/somebodys_already_using_verizons_id_to_track/::
+
             <script>
             propublica.views.acrButton = propublica.View.extend({
               id : "run-demo",
               tag : "a",
-            
+
               bindings : {
                 click : "runDemo"
               },
-            
+
               getAcrData : function(data) {
                 var ids = {
-                      "HTTP_X_UIDH"     : "Verizon", 
+                      "HTTP_X_UIDH"     : "Verizon",
                       "HTTP_X_ACR"      : "AT&T",
                       "HTTP_X_VF_ACR"   : "Vodafone",
                       "HTTP_X_UP_SUBNO" : "AT&T",
@@ -338,7 +375,7 @@ class TrackingBeaconFilter(WebFilter):
                       "HTTP_X_PIPER_ID" : "",
                       "HTTP_X_MSISDN"   : ""
                     };
-            
+
                 for (userHeader in data) {
                   if (ids[userHeader]) {
                     return {
@@ -349,7 +386,7 @@ class TrackingBeaconFilter(WebFilter):
                 }
                 return false;
               },
-            
+
               runDemo : function(e) {
                 e.preventDefault();
                 var that = this;
@@ -363,12 +400,12 @@ class TrackingBeaconFilter(WebFilter):
                     } else {
                       $(".noresult").show();
                     }
-                });    
+                });
               }
             });
             </script>
-            
-            
+
+
                 <div class="pp-interactive" id="tracking-button">
                     <h2 class="pp-int-hed">
                         Does Your Phone Company Track You?</h2>
@@ -384,20 +421,20 @@ class TrackingBeaconFilter(WebFilter):
                     </div>
                 </div>
     '''
-    
+
     def filter_request_params(self, params):
         ''' Filter request params to remove tracking headers. '''
-        
+
         return self.filter_params(params)
-        
+
     def filter_response_params(self, params):
         ''' Filter response params to remove tracking headers. '''
 
         return self.filter_params(params)
-        
+
     def filter_params(self, params):
         BAD_HEADERS = {
-            'UIDH': 'Verizon Unique Identifier Header', 
+            'UIDH': 'Verizon Unique Identifier Header',
             'ACR': 'AT&T',
             'VF_ACR': 'Vodafone',
             'UP_SUBNO': 'AT&T',
@@ -408,83 +445,84 @@ class TrackingBeaconFilter(WebFilter):
         # !! do we really need to look for all these prefixes?
         # diffferent press reports and sample code show them differently
         PREFIXES = ['HTTP_X_', 'X_', 'X-']
-        
+
         for suffix in BAD_HEADERS:
             source = BAD_HEADERS[suffix]
             for prefix in PREFIXES:
-                params = self.remove_param(params, 
+                params = self.remove_param(params,
                     prefix + suffix, 'Tracking header from {}'.format(source))
-        
+
         return params
-        
+
 class BreachVulnFilter(WebFilter):
-    ''' Disable http compression to avoid BREACH vuln. 
-    
+    ''' Disable http compression to avoid BREACH vuln.
+
         See [http://en.wikipedia.org/wiki/BREACH_%28security_exploit%29 BREACH (security exploit) - Wikipedia, the free encyclopedia]
     '''
-    
+
     def filter_request_params(self, params):
-        ''' Filter request params. 
-        
-            Disable http compression. 
+        ''' Filter request params.
+
+            Disable http compression.
         '''
 
-        return self.remove_param(params, 
+        return self.remove_param(params,
             'Accept-Encoding', 'to avoid BREACH vuln')
 
 class NoRefererFilter(WebFilter):
     ''' Remove referer from requests to avoid browser tracking. '''
-    
+
     def filter_request_params(self, params):
         ''' Remove referer. '''
 
         return self.remove_param(params,
             'Referer','to avoid link click tracking')
-        
+
 class CookieFilter(WebFilter):
-    ''' Remove cookies from requests to avoid browser tracking. 
-    
+    ''' Remove cookies from requests to avoid browser tracking.
+
         See NSA uses Google cookies to pinpoint targets for hacking
             http://www.washingtonpost.com/blogs/the-switch/wp/2013/12/10/nsa-uses-google-cookies-to-pinpoint-targets-for-hacking/
             NSA surveillance and third-party trackers: How cookies help government spies.
             http://www.slate.com/blogs/future_tense/2013/12/13/nsa_surveillance_and_third_party_trackers_how_cookies_help_government_spies.html
-            
+
         Allowing host-only cookies doesn't help, because spies tap the main pipes and see all cookies.
         Allowing ssl-only cookies doesn't help, because spies also get data directly from sites like Google.
-        
+
         Deleting all cookies works.
         But it makes sites that track you very unhappy.
         Specifically the site may not remember that you're logged in.
-        
+
         We'll probably want to make this filter very configurable.
     '''
-    
+
     def filter_request_params(self, params):
         ''' Remove cookie. '''
 
-        return self.remove_param(params, 
+        return self.remove_param(params,
             'Cookie', 'to avoid browser tracking')
-        
+
     def filter_response_params(self, params):
         ''' Remove cookie. '''
 
-        return self.remove_param(params, 
+        return self.remove_param(params,
             'Set-Cookie', 'to avoid browser tracking')
-        
+
 class SpoofUserAgentFilter(WebFilter):
-    ''' Replace user-agent to avoid browser tracking. 
+    ''' Replace user-agent to avoid browser tracking.
 
         Hide in the crowd.
-        
+
         Ideally report a user-agent that misleads malware.
-        If an attacker sends us a hidden payload, we'd rather it was for a different system.
+        If an attacker sends us a hidden payload, we'd rather it was for
+        a different system.
     '''
-    
+
     def filter_request_params(self, params):
         ''' Replace user-agent. '''
 
         # use common user-agent strings to hide in the crowd
-        
+
         # 2013-06 chrome seems to be most common, then firefox
         #     https://en.wikipedia.org/wiki/Usage_share_of_web_browsers
         # agent strings
@@ -500,12 +538,12 @@ class SpoofUserAgentFilter(WebFilter):
         apple_android_agent = 'Mozilla/5.0 (Linux; U; Android 2.2; en-sa; HTC_DesireHD_A9191 Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1'
         apple_ipad_agent = 'Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405'
         # many more at http://www.useragentstring.com/pages/Browserlist/
-        
+
         if 'User-agent' in params:
             old_value = params['User-agent']
         else:
             old_value = ''
-            
+
         if 'Apple' in old_value:
             new_value = firefox_common_agent
         else:
@@ -513,21 +551,21 @@ class SpoofUserAgentFilter(WebFilter):
         params['User-agent'] = new_value
         self.log.debug('"User-agent" replaced to avoid browser tracking. old: {}, new: {}'.
             format(old_value, new_value))
-        
+
         return params
 
 class LogFilter(WebFilter):
-    ''' Log proxy activity. 
-        
+    ''' Log proxy activity.
+
         !! This should be a user option.
-        
-        Dangerous info to log. All of this onfo was already in the logs. 
-        Now it's in one place.
+
+        Dangerous info to log. All of this onfo was already in various logs.
+        But now it's in one place.
     '''
-    
+
     def filter_request(self, request):
-        ''' Log request. 
-        
+        ''' Log request.
+
             Returns (prefix, params) so we don't parse the request twice.
         '''
 
@@ -536,21 +574,21 @@ class LogFilter(WebFilter):
             # header only
             header = syr.http.header(request)
             self.log.debug('parsed request header summary: {}'.format(self.summary(header)))
-                
+
         else:
             self.log.debug('parsed request summary: {}'.format(self.summary(request)))
-            
+
         return prefix, params
 
     def filter_response(self, response):
-        ''' Log response. 
-        
+        ''' Log response.
+
             Returns (prefix, params, data) so we don't parse the response twice.
         '''
-            
+
         # parsing also decompresses and decodes to unicode
         prefix, params, data = syr.http.parse_response(response)
-        
+
         self.log.debug('parsed response:')
         self.log.debug('    {}'.format(prefix))
         for name in params:
@@ -558,20 +596,20 @@ class LogFilter(WebFilter):
         self.log.debug('    data length: {}'.format(len(data)))
         #DEBUG if syr.http.is_text(params):
         #DEBUG     self.log.debug('    {}'.format(data)) # format(self.summary(data)))
-            
+
         return prefix, params, data
-          
+
 class LogUrlFilter(WebFilter):
-    ''' Log url. 
-        
+    ''' Log url.
+
         !! This should be a user option.
-        
+
         Dangerous info to log. This info was already in the logs but in pieces.
     '''
-    
+
     def filter_request(self, request):
-        ''' Log request. 
-        
+        ''' Log request.
+
             Returns (prefix, params) so we don't parse the request twice.
         '''
 
@@ -589,30 +627,37 @@ class LogUrlFilter(WebFilter):
                         protocol = 'http'
                     url = protocol + '://' + params['Host'] + local_url
                     self.log.debug(url)
-            
+
         return prefix, params
 
-def proxy(ca_name=None, ca_file=None):
+def proxy(ca_name=None, ca_file=None, ca_common_name=None, keys_dir=None):
     ''' Configure mitm proxy. '''
-    
+
     global mitm_proxy
-    
+
     try:
+        log.debug('init proxy')
         mitm_proxy = miproxy.proxy.AsyncMitmProxy(
-            ca_name=ca_name, 
-            ca_file=ca_file, 
+            ca_name=ca_name,
+            ca_file=ca_file,
+            ca_common_name=ca_common_name,
+            keys_dir=keys_dir,
             server_address=('', HTTP_PROXY_PORT))
     except Exception as exc:
-        log.debug(syr.utils.last_exception())
+        log.debug(traceback.format_exc())
         if "Address already in use" in str(exc):
-            # program = program_from_port(HTTP_PROXY_PORT)
-            # log.debug('port {} already in use by "{}"'.format(HTTP_PROXY_PORT, program))
-            msg = 'port {} already in use. Is VBoxHeadless running?'.format(HTTP_PROXY_PORT)
+            msg = 'port {} already in use'.format(HTTP_PROXY_PORT)
+            try:
+                msg += 'by {}'.format(program_from_port(HTTP_PROXY_PORT))
+            except:
+                log.debug('Ignoring error for now: \n{}'.format(traceback.format_exc()))
+            # msg = 'port {} already in use. Is VBoxHeadless running?'.format(HTTP_PROXY_PORT)
             print(msg)
             log.debug(msg)
             sys.exit(msg)
         raise
-    
+
+    log.debug('start registering filters')
     if WARNING_WARNING_WARNING_TESTING_ONLY_DO_NOT_SHIP:
         mitm_proxy.register_interceptor(LogFilter)
         mitm_proxy.register_interceptor(LogUrlFilter)
@@ -623,24 +668,35 @@ def proxy(ca_name=None, ca_file=None):
     mitm_proxy.register_interceptor(CookieFilter)
     mitm_proxy.register_interceptor(SpoofUserAgentFilter)
     mitm_proxy.register_interceptor(TimeFilter)
-    
+
+    log.debug('start proxy')
     try:
         mitm_proxy.serve_forever()
-    # except KeyboardInterrupt:
+    except Exception as exc:
+        log.error(exc)
+        sys.exit(exc)
+    else:
+        log.debug('started proxy')
     finally:
         # don't hide earlier errors
         try:
+            log.debug('close proxy server')
             mitm_proxy.server_close()
         except:
             pass
-    
+
 def main():
-    if not dropped_privileges:
-        log.debug('could not drop privileges t user {}'.format(USER))
-    log.debug('HTTP proxy at {}'.format(HTTP_PROXY_URL))
-    proxy(ca_name=CA_NAME, ca_file=CA_FILE)
+    try:
+        log.debug('start main')
+        log.debug('HTTP proxy at {}'.format(HTTP_PROXY_URL))
+        proxy(ca_name=CA_NAME, ca_file=CA_FILE, ca_common_name=CA_COMMON_NAME, keys_dir=KEYS_DATA_DIR)
+    except Exception as exc:
+        log.error(traceback.format_exc())
+    else:
+        log.debug('started main')
 
 if __name__ == '__main__':
     ''' run doctests as "python -m doctest -v proxy.py" '''
     main()
 
+print('end {}'.format(__file__)) # DEBUG

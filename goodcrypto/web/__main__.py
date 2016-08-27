@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/python
 # -*- coding: utf-8 -*-
 
 '''
@@ -26,7 +26,7 @@
     We want to detect when a process locks up, not just when it dies.
 
     Copyright 2014 GoodCrypto
-    Last modified: 2014-12-04
+    Last modified: 2015-07-17
     
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
     
@@ -61,7 +61,7 @@ import traceback
     
     The /etc/sudoers ownership/permissions look identical to working systems.
     
-    In filters.py syr.user.drop_privileges() works on the dev system. 
+    In filters.py syr.user.su() works on the dev system. 
     But on the dist system the python sh module suddenly decides its globals 
     are all set to None.
     
@@ -79,8 +79,8 @@ import traceback
 
 # drop privileges immediately
 from goodcrypto.web.constants import USER
-from syr.user import drop_privileges
-drop_privileges(USER)
+from syr.user import su
+su(USER)
 """
 
 import shutil

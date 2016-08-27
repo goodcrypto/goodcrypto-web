@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% comment %}
+
+    Copyright 2014-2015 GoodCrypto
+    Last modified: 2015-11-23
+
+{% endcomment %}
+{% load i18n custom %}
+
+  {% block meta_keywords %}
+  <meta name="Keywords" content="privacy, surfing web">
+  {% endblock meta_keywords %}
+  {% block meta_description %}
+  <meta name="Description" content="Install your GoodCrypto web certificate into your browser.">
+  {% endblock meta_description %}
+
+  {% block titlevar %}Access https sites{% endblock %}
+
+{% block contentpane %}
+
+<h3>Access https sites</h3>
+
+<div class="row">
+    <p class="dropcap">
+    Ask your web administrator to help, or follow these simple steps.
+    </p>
+    <p>
+    Your GoodCrypto private server has a unique certificate which helps protect your connection.
+    You need to import this certificate to access sites that use https (i.e., SSL/TLS).
+    </p>
+
+    <div>
+    <ul>
+    <div class="row">
+        <div class="col-md-1">
+            <div class="dropcap">1.</div>
+        </div>
+
+        <div class="col-md-2">
+            <a href="/web/get_cert/"
+               title="{% trans 'Save the certificate on your local computer' %}">
+                <button type="button" class="btn btn-primary btn-block">{% trans 'Save certificate' %}</button>
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-1">
+            <div class="dropcap">2.</div>
+        </div>
+
+        <div class="col-md-2">
+            <a href="https://goodcrypto.com/qna/knowledge-base/import-web-certificate/"
+               title="{% trans 'Import the certificate into your browser' %}">
+                <button type="button" class="btn btn-primary btn-block">{% trans 'Import' %}</button>
+            </a>
+        </div>
+    </div>
+    </ul>
+    </div>
+</div>
+
+{% endblock contentpane %}
+

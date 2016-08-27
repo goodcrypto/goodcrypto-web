@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/python
 # -*- coding: utf-8 -*-
 
 '''
@@ -8,7 +8,7 @@
     Must be run in background as root.
     
     Copyright 2015 GoodCrypto
-    Last modified: 2015-04-17
+    Last modified: 2015-07-17
 '''
 
 # delete in python 3
@@ -16,7 +16,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-import sh, re
+import re, sh, time
 from traceback import format_exc
 
 from goodcrypto.constants import STATUS_GREEN, STATUS_RED, STATUS_YELLOW, TOR_STATUS_FILE
@@ -94,7 +94,7 @@ def tor_check():
         except:
             # it doesnt matter if it's already stopped
             pass
-        sh.sleep(5)
+        time.sleep(5)
         sh.service('tor', 'start')
             
     return percent
@@ -118,5 +118,5 @@ while True:
         # just log it and try again
         log.debug(format_exc())
                 
-    sh.sleep(30)
+    time.sleep(30)
 

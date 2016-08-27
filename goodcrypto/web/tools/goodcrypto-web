@@ -1,0 +1,134 @@
+#! /usr/bin/python
+# -*- coding: utf-8 -*-
+'''
+    Control Goodcrypto Web
+    
+    Copyright 2014 GoodCrypto
+    Last modified: 2015-07-09
+'''
+
+# delete in python 3
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+import argparse, os.path, sh, time, traceback
+
+import syr.log
+
+log = syr.log.get_log()
+
+NAME = 'goodcrypto web'
+SOURCEDIR = '/var/local/projects/goodcrypto/server/src/web'
+MAIN_PROGRAM = os.path.join(SOURCEDIR, '__main__.py')
+PROXY_PROGRAM = os.path.join(SOURCEDIR, 'filters.py')
+TEST_PROGRAM = os.path.join(SOURCEDIR, 'tests/test')
+
+def show_stderr(line):
+    line = line.rstrip()
+    print(line)
+    log.error(line)
+
+def start():
+    if is_running():
+        output('{} is already running'.format(NAME))
+    else:
+        assert os.path.exists(PROXY_PROGRAM)
+        """
+        UserWarning: with contexts are deprecated because they are not thread safe.  they will be removed in the next version.  use subcommands instead http://amoffat.github.io/sh/#sub-commands. see https://github.com/amoffat/sh/issues/195
+        with sh.sudo:
+            command = sh.Command(PROXY_PROGRAM) # MAIN_PROGRAM)
+            command(_err=show_stderr, _bg=True)
+        """
+        sh.sudo('-u', 'goodcrypto', PROXY_PROGRAM, _err=show_stderr, _bg=True)
+        time.sleep(2)
+        if is_running():
+            status()
+        else:
+            output('could not start {}'.format(NAME))
+
+def stop():
+    if is_running(MAIN_PROGRAM) or is_running(PROXY_PROGRAM):
+        kill(MAIN_PROGRAM)
+        kill(PROXY_PROGRAM)
+        time.sleep(2)    
+        if is_running():
+            output('could not stop {}'.format(NAME))
+        else:
+            status()
+    else:
+        output('{} is already stopped'.format(NAME))
+            
+def restart(): 
+    stop()
+    start()
+
+def status(): 
+    if is_running():
+        output('{} is running'.format(NAME))
+    else:
+        output('{} stopped'.format(NAME))
+        
+def is_running(pattern=None):
+    if pattern is None:
+        running = is_running(MAIN_PROGRAM) or is_running(PROXY_PROGRAM)
+    
+    else:
+        try:
+            pgrep_output = sh.pgrep('--full', pattern).stdout.strip()
+            # output('pgrep_output: {}'.format(pgrep_output)) # DEBUG
+            running = True
+        except:
+            running = False
+            
+    # output('running {}: {}'.format(pattern, running)) # DEBUG
+    return running
+    
+def kill(program):
+    try:
+        log('sh.pkill({})'.format(program))
+        sh.pkill('--full', '--signal', 'TERM', program)
+    # it's okay if the process is gone
+    except sh.ErrorReturnCode_1:
+        pass
+    # we just asked for Signal 15
+    except sh.SignalException_15:
+        pass
+    except:
+        log.debug(traceback.format_exc())
+        raise
+
+def test():
+    sh.Command(TEST_PROGRAM).run()
+        
+def output(msg):
+    log.debug(msg)
+    print(msg)
+        
+def main ():
+    parser = argparse.ArgumentParser(description='Control Goodcrypto Web.')
+    parser.add_argument('command', choices=['start', 'stop', 'restart', 'status', 'test'])
+
+    args = parser.parse_args()
+    
+    if 'start' == args.command:
+        start()
+        
+    elif 'stop' == args.command:
+        stop()
+        
+    elif 'restart' == args.command:
+        restart()
+        
+    elif 'status' == args.command:
+        status()
+
+    elif 'test' == args.command:
+        test()
+        
+    else:
+        parser.print_help()
+    
+if __name__ == '__main__':
+    main()
+

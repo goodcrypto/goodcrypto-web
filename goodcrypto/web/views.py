@@ -2,7 +2,7 @@
     Web views
 
     Copyright 2014-2015 GoodCrypto
-    Last modified: 2015-04-12
+    Last modified: 2015-04-25
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -53,6 +53,19 @@ def home(request):
 
     return response
 
+def configure(request):
+    ''' Show how to configure mta. '''
+    
+    template = 'web/configure.html'
+    return render_to_response(template, context_instance=RequestContext(request))
+
+def import_certificate(request):
+    ''' Show how to import the web certificate. '''
+    
+    template = 'web/certificate.html'
+    return render_to_response(
+      template, {'fingerprint': get_fingerprint()}, context_instance=RequestContext(request))
+
 def show_fingerprint(request):
     '''Show the fingerprint of the web certificate.'''
 
@@ -71,7 +84,7 @@ def show_fingerprint(request):
     return response
 
 
-def download_certficate(request):
+def download_certificate(request):
     '''Download the web' certificate.'''
 
     log('downloading web cert')
@@ -93,7 +106,7 @@ def get_fingerprint():
 
     try:
         # get the fingerprint
-        result = sh.openssl('x509', '-fingerprint', '-in', CA_FILE)
+        result = sh.openssl('x509', '-fingerprint', '-in', CA_FILE, '-md5')
         log('result: {}'.format(result.exit_code))
         if result.exit_code == 0:
             lines = result.stdout.split('\n')
@@ -106,12 +119,6 @@ def get_fingerprint():
 
 
     return fingerprint
-
-def configure(request):
-    ''' Show how to configure mta. '''
-    
-    template = 'web/configure.html'
-    return render_to_response(template, context_instance=RequestContext(request))
 
 def api(request):
     '''Interface with the goodcrypto server through the API.

@@ -1,15 +1,15 @@
 '''
     GoodCrypto web app
-    
+
     Copyright 2014-2015 GoodCrypto
-    Last modified: 2015-04-16
+    Last modified: 2015-10-13
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
 
 from goodcrypto.constants import STATUS_GREEN, STATUS_RED, STATUS_YELLOW, TOR_STATUS_FILE
-from goodcrypto.utils import is_program_running
 from syr.log import get_log
+from syr.process import is_program_running
 
 log = get_log()
 
@@ -32,7 +32,7 @@ def get_web_status():
                 tor_status = STATUS_RED
     except:
         tor_status = STATUS_RED
-        
+
     if program_running:
         status = tor_status
     else:
@@ -41,5 +41,5 @@ def get_web_status():
     log('web status: {}'.format(status))
 
     return status
-    
+
 
