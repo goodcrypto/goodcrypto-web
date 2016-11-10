@@ -21,8 +21,8 @@
        * "Import"
        * Select the ca_file
 
-    Copyright 2014 GoodCrypto
-    Last modified: 2015-11-05
+    Copyright 2016 GoodCrypto
+    Last modified: 2016-03-31
 
     This file is open source, licensed under GPLv3 <http://www.gnu.org/licenses/>.
 '''
@@ -112,6 +112,7 @@ class WebFilter(
     def __init__(self, *args, **kwargs):
 
         logname = 'web.filter.{}.log'.format(self.__class__.__name__)
+        self.exception = None
         self.log = get_log(logname, recreate=True)
 
         super(WebFilter, self).__init__(*args, **kwargs)
@@ -133,9 +134,9 @@ class WebFilter(
                     format(len(request), len(filtered_request))) #DEBUG
                 request = filtered_request
 
-        except:
-            # just log it
-            self.report_exception()
+        except Exception as exc:
+            msg = self.log_exception()
+            self.abort_request(msg)
 
         return request
 
@@ -172,7 +173,8 @@ class WebFilter(
         except:
             self.log.debug('    response replaced by error response {}'.
                 format(self.summary(response)))
-            response = self.report_exception()
+            html = self.exception_html()
+            response = syr.http.create_response(httplib.INTERNAL_SERVER_ERROR, data=html)
 
         return response
 
@@ -236,10 +238,14 @@ class WebFilter(
             summary_data += '...'
         return line_separator + summary_data.replace(syr.http.http_eol, line_separator)
 
-    def report_exception(self):
+    def log_exception(self):
         msg = 'filter: {}, \n{}'.format(self.__class__.__name__, traceback.format_exc())
         log.debug(msg)
         self.log.debug(msg)
+        return msg
+
+    def exception_html(self):
+        msg = self.log_exception()
 
         html = '''
             <head>
@@ -252,9 +258,8 @@ class WebFilter(
                 <pre>{}</pre>
             </body>
         '''.format(msg).strip()
-        response = syr.http.create_response(httplib.INTERNAL_SERVER_ERROR, data=html)
-
-        return response
+        
+        return html
 
     def remove_param(self, params, name, why):
         ''' Remove a header from params. '''
@@ -277,12 +282,52 @@ class HtmlFirewallFilter(WebFilter):
         Secure Programming for Linux and Unix
 
         Default deny, then whitelist html.
+        
+        Filter unsafe content types from request.
 
-        Only allow plain html. For example, no executables.
+        Only allow plain html. No BLOBs. For example, no executables.
         Css allows embedding of executables, and we don't have a css parser.
         So the 'style' tag and attribute are not allowed.
     '''
 
+    def unused_filter_request(self, request):
+        ''' NOT WORKING. Filter unsafe content types from request.
+
+            Returns (prefix, params) so we don't parse the request twice.
+        '''
+
+        UNSAFE_CONTENT_TYPES = ['application', 'image']
+
+        prefix, params = syr.http.parse_request(request)
+            
+        self.log('HtmlFirewallFilter params:') # DEBUG
+        for param in params: # DEBUG
+            self.log('    {}: {}'.format(param, params[param])) # DEBUG
+            
+        PARAM_NAME = 'accept'
+
+        if PARAM_NAME in params:
+            types = params[PARAM_NAME]
+            self.log('original {}: {}'.format(PARAM_NAME, types))
+            filtered_types = []
+            
+            for content_type in types.split(','):
+                content_type = content_type.strip().lower()
+                
+                for unsafe_type in UNSAFE_CONTENT_TYPES:
+                    if content_type.startswith(unsafe_type):
+                        self.log('removed content-type: {}'.
+                                 format(content_type))
+                    else:
+                        filtered_types.append(content_type)
+                        
+            if filtered_types:
+                params[PARAM_NAME] = ','.join(filtered_types)
+            else:
+                del params[PARAM_NAME]
+            
+        return prefix, params
+        
     def filter_html(self, html):
         ''' Whitelist plain html.
 
@@ -559,7 +604,7 @@ class LogFilter(WebFilter):
 
         !! This should be a user option.
 
-        Dangerous info to log. All of this onfo was already in various logs.
+        Dangerous info to log. All of this info was already in various logs.
         But now it's in one place.
     '''
 
