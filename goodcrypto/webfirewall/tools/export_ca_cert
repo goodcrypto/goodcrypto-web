@@ -1,0 +1,43 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+'''
+    Export ca cert from vm to localhost
+    
+    UNUSED and unfinished 
+    
+    This command runs on the goodcrypto server vm in the web chroot.
+    It prompts for a user and password on the host system, then copies 
+    the web ca cert file to /tmp on the host system.
+    
+    Copyright 2014-2016 GoodCrypto
+    Last modified: 2016-09-05
+'''
+
+import sys
+IS_PY2 = sys.version_info[0] == 2
+
+if IS_PY2:
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+
+import os.path
+
+import syr.cli
+
+try:
+    from goodcrypto.webfirewall.constants import CA_FILE
+except:
+    from webfirewall.constants import CA_FILE
+
+user = raw_input('user: ')
+password = raw_input('password: ')
+
+responses = {
+    '#': 'put {} {}@localhost/tmp'.format(CA_FILE, user)
+    'password:': password,
+    }
+cli_result = syr.cli.Responder(
+    responses, 
+    'sftp')
+

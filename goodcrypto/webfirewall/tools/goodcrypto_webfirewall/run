@@ -1,0 +1,16 @@
+#! /bin/bash
+#  Supervise managing webfirewall
+#  Last modified: 2016-08-06
+
+PYTHON=/usr/bin/python3
+LOG_DIR=/var/local/log/goodcrypto
+LOG_FILE=goodcrypto.webfirewall.log
+
+if [ -e $LOG_DIR ] ; then
+    LOG=$LOG_DIR/$LOG_FILE
+else
+    LOG=../data/$LOG_FILE
+fi
+
+cd ..
+sudo -u goodcrypto $PYTHON filters.py &>$LOG

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% comment %}
+
+    Copyright 2015-2016 GoodCrypto
+    Last modified: 2016-09-19
+
+{% endcomment %}
+{% load i18n custom %}
+
+  {% block meta_keywords %}
+  <meta name="Keywords" content="privacy, encryption, email, surfing web">
+  {% endblock meta_keywords %}
+  {% block meta_description %}
+  <meta name="Description" content="GoodCrypto protect everyone in your organisation.">
+  {% endblock meta_description %}
+
+{% block titlevar %}{% trans 'Web Firewall' %}{% endblock %}
+
+{% block contentpane %}
+
+    {% include "snippets/secure_button.html" %}
+
+    <div class="row">
+        <h3>Web Firewall</h3>
+    </div>
+
+    <div class="col-md-6 col-xm-6">
+        <div class="row">&nbsp;</div>
+        <div class="table-responsive btn-group">
+            <table class="table table-responsive">
+                <tr>
+                    <th>
+                        <p>&nbsp;</p>
+                        {% trans 'Configure browser' %}
+                        <p>&nbsp;</p>
+                    </th>
+                    <td>
+                        <p>&nbsp;</p>
+                        <a href="https://goodcrypto.com/qna/knowledge-base/configure-browsers/"
+                           title="{% trans 'Configure your browser to make it harder to track you or crack your computer.' %}">
+                            <button type="button" class="btn btn-primary btn-block">{% trans 'Reduce tracking' %}</button>
+                        </a>
+                        </a>
+                        <p>&nbsp;</p>
+                    </td>
+                    <td>
+                        <p>&nbsp;</p>
+                        <a href="/webfirewall/certificate/"title="{% trans 'Import the web certificate so you can visit websites using https://' %}">
+                            <button type="button" class="btn btn-primary btn-block">{% trans 'Access https sites' %}</button>
+                        </a>
+                        <p>&nbsp;</p>
+                    </td>
+                </tr>
+{% comment %}
+                <tr>
+                    <th>
+                        <p>&nbsp;</p>
+                        {% trans 'Administrator' %}
+                        <p>&nbsp;</p>
+                    </th>
+                    <td>
+                        <p>&nbsp;</p>
+                        <a href="/admin/webfirewall/options/" title="{% trans 'Manage options for browsing and Tor.' %}">
+                            <button type="button" class="btn btn-primary btn-block">{% trans 'Options' %}</button>
+                        </a>
+                        <p>&nbsp;</p>
+                    </td>
+                    <td>
+                        <p>&nbsp;</p>
+
+                        <p>&nbsp;</p>
+                    </td>
+                </tr>
+{% endcomment %}
+                {# blank row to get all the buttons to line up #}
+                <tr>
+                    <th>
+                        &nbsp;
+                    </th>
+                    <td>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </td>
+                    <td>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </td>
+                </tr>
+            </table>
+            <div class="row">&nbsp;</div>
+            <div class="row">
+                <p class="dropcap">
+                    After you complete both the above steps, you're ready to continue browsing the way you always have knowing
+                    that it's much harder to crack your system and track your online activity.
+                </p>
+            </div>
+
+        </div>
+    </div>
+{% endblock contentpane %}
+
